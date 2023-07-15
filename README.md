@@ -23,5 +23,5 @@ Usage of ./staff-bot:
 
 The bot works combined to cron. Add this line to the crontab:
 ```
-0 0/5 0 ? * * * /usr/bin/CERNJobs -tg-chat-id <id> -tg-token <tkn>
+*/5 * * * * /usr/bin/CERNJobs -tg-chat-id <id> -tg-token <tkn>
 ```
