@@ -133,7 +133,7 @@ func (j *JobList) hasNewJobs(got []JobPosting) ([]JobPosting, error) {
 		}
 	}
 	if len(found) != 0 {
-		j.jobs = found
+		j.jobs = got
 		if err := j.save(); err != nil {
 			return nil, err
 		}
