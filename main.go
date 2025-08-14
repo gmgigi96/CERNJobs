@@ -68,7 +68,7 @@ func (j *JobList) init(src string) error {
 	return nil
 }
 
-const jobsURL = "https://careers.smartrecruiters.com/CERN/staff"
+var jobsURLs = []string{"https://careers.smartrecruiters.com/CERN/staff", "https://careers.smartrecruiters.com/CERN/experienced-graduates", "https://careers.smartrecruiters.com/CERN/entry-levels"}
 
 type JobPosting struct {
 	DetailsURL string
@@ -77,48 +77,51 @@ type JobPosting struct {
 }
 
 func getJobPosting() ([]JobPosting, error) {
-	res, err := http.Get(jobsURL)
-	if err != nil {
-		return nil, fmt.Errorf("error doing GET request to %s: %w", jobsURL, err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got status code %s", res.Status)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing document: %w", err)
-	}
-
 	var jobs []JobPosting
-	// <li class="opening-job job">
-	// 	<a href="https://jobs.smartrecruiters.com/CERN/743999918559253-applied-physicist-ep-nu-2023-99-ld-?trid=08c65188-8d9e-4a09-bff1-3337c1661b63" class="link--block details">
-	// 		<h4 class="details-title job-title link--block-target">Applied Physicist (EP-NU-2023-99-LD)</h4>
-	// 		<ul class="job-list list--dotted">
-	// 			<li class="job-desc">Geneva, Switzerland</li>
-	// 			<li class="job-desc">EP</li>
-	// 		</ul>
-	// 	</a>
-	// </li>
-	doc.Find(".opening-job.job").Each(func(_ int, s *goquery.Selection) {
-		title := s.Find(".job-title").Text()
-		url, _ := s.Find("a").Attr("href")
-		department := s.Find(".job-desc").Last().Text()
-		jobs = append(jobs, JobPosting{
-			Title:      strings.TrimSpace(title),
-			DetailsURL: url,
-			Department: department,
+
+	for _, url := range jobsURLs {
+		res, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("error doing GET request to %s: %w", url, err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("got status code %s", res.Status)
+		}
+
+		doc, err := goquery.NewDocumentFromReader(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing document: %w", err)
+		}
+
+		// <li class="opening-job job">
+		// 	<a href="https://jobs.smartrecruiters.com/CERN/743999918559253-applied-physicist-ep-nu-2023-99-ld-?trid=08c65188-8d9e-4a09-bff1-3337c1661b63" class="link--block details">
+		// 		<h4 class="details-title job-title link--block-target">Applied Physicist (EP-NU-2023-99-LD)</h4>
+		// 		<ul class="job-list list--dotted">
+		// 			<li class="job-desc">Geneva, Switzerland</li>
+		// 			<li class="job-desc">EP</li>
+		// 		</ul>
+		// 	</a>
+		// </li>
+		doc.Find(".opening-job.job").Each(func(_ int, s *goquery.Selection) {
+			title := s.Find(".job-title").Text()
+			url, _ := s.Find("a").Attr("href")
+			department := s.Find(".job-desc").Last().Text()
+			jobs = append(jobs, JobPosting{
+				Title:      strings.TrimSpace(title),
+				DetailsURL: url,
+				Department: department,
+			})
 		})
-	})
+	}
 
 	return jobs, nil
 }
 
 func (j *JobList) has(job *JobPosting) bool {
 	for _, jj := range j.jobs {
-		if jj.Department == job.Department && jj.Title == job.Title {
+		if jj.DetailsURL == job.DetailsURL {
 			return true
 		}
 	}
